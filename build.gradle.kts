@@ -14,17 +14,16 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "java")
-    apply(plugin = "org.springframework.boot")
-    apply(plugin = "io.spring.dependency-management")
+    pluginManager.withPlugin("java") {
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(25)
+            }
+        }
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(25)
+        tasks.withType<Test>().configureEach {
+            useJUnitPlatform()
         }
     }
-
-    tasks.withType<Test> {
-        useJUnitPlatform()
-    }
 }
+
