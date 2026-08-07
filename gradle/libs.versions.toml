@@ -1,0 +1,16 @@
+[versions]
+mapStruct = "1.6.3"
+
+[libraries]
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
+
+lombok = { module = "org.projectlombok:lombok" }
+h2 = { module = "com.h2database:h2" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapStruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapStruct" }
+
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
