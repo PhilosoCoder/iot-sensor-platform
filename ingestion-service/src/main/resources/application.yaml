@@ -16,3 +16,16 @@ spring:
 
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        # Exposes /actuator/health/liveness and /actuator/health/readiness.
+        # Auto-enabled on Kubernetes; set explicitly so they also work locally.
+        # Keep external dependencies (DB, Kafka) out of liveness - otherwise an outage restarts every pod.
+        enabled: true

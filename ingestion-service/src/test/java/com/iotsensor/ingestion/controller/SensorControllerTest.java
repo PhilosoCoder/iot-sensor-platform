@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.iotsensor.ingestion.dto.SensorDto;
 import com.iotsensor.ingestion.service.SensorService;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -26,7 +27,8 @@ class SensorControllerTest {
     private SensorService sensorService;
 
     @Test
-    void listSensorsReturnsSensors() throws Exception {
+    @SneakyThrows
+    void listSensorsReturnsSensors() {
         var sensors = List.of(
             new SensorDto("sensor-1", "Temperature Sensor", "temperature", "warehouse", "celsius", true),
             new SensorDto("sensor-2", "Humidity Sensor", "humidity", "office", "percent", false)
