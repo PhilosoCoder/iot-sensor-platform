@@ -43,3 +43,21 @@ NAME                                        READY   STATUS    RESTARTS   AGE
 iot-kafka-dual-role-0                       1/1     Running   0          ...
 strimzi-cluster-operator-xxx                1/1     Running   0          ...
 ```
+
+### 4. Build the ingestion-service image and load it into minikube
+
+The jar is built on the host, the Dockerfile only packages it (layered, non-root, container-aware JVM).
+
+```bash
+./gradlew :ingestion-service:bootJar
+docker build -t ingestion-service:0.0.1-SNAPSHOT ingestion-service
+minikube image load ingestion-service:0.0.1-SNAPSHOT
+```
+
+Verify the image is available inside minikube:
+
+```bash
+minikube image ls | grep ingestion-service
+```
+
+> Use a fixed tag (not `latest`): with `latest`, Kubernetes defaults to `imagePullPolicy: Always` and tries to pull from Docker Hub instead of using the loaded image.

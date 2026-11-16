@@ -27,6 +27,12 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+// Only produce the executable Spring Boot jar - the extra "-plain.jar" would make the
+// Dockerfile's `COPY build/libs/*.jar` ambiguous.
+tasks.jar {
+    enabled = false
+}
+
 tasks.compileJava {
     options.compilerArgs.addAll(
         listOf(

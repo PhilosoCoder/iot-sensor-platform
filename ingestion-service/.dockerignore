@@ -1,0 +1,3 @@
+# Allowlist: the image only needs the Spring Boot jar built by `./gradlew :ingestion-service:bootJar`.
+*
+!build/libs/*.jar
