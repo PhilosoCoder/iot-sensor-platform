@@ -61,3 +61,36 @@ minikube image ls | grep ingestion-service
 ```
 
 > Use a fixed tag (not `latest`): with `latest`, Kubernetes defaults to `imagePullPolicy: Always` and tries to pull from Docker Hub instead of using the loaded image.
+
+### 5. Deploy the ingestion-service
+
+```bash
+kubectl apply -f k8s/apps/ingestion-service/
+kubectl rollout status deployment/ingestion-service -n iot-sensor-platform
+```
+
+After rebuilding and re-loading the image under the same tag, restart the pods so they pick it up:
+
+```bash
+kubectl rollout restart deployment/ingestion-service -n iot-sensor-platform
+```
+
+### 6. Try it out
+
+```bash
+kubectl port-forward svc/ingestion-service 8080:8080 -n iot-sensor-platform
+```
+
+In another terminal:
+
+```bash
+curl localhost:8080/actuator/health/readiness
+
+curl -X POST localhost:8080/v1/readings \
+  -H 'Content-Type: application/json' \
+  -d '{"sensorId":"sensor-1","value":21.5}'
+
+curl localhost:8080/v1/readings/sensor-1
+```
+
+> Storage is still in-memory (H2) at this stage: readings are lost when the pod restarts.
