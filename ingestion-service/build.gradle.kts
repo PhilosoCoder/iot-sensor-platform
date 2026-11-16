@@ -4,6 +4,11 @@ plugins {
     id("io.spring.dependency-management")
 }
 
+configurations {
+    testCompileOnly { extendsFrom(compileOnly.get()) }
+    testAnnotationProcessor { extendsFrom(annotationProcessor.get()) }
+}
+
 dependencies {
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)
