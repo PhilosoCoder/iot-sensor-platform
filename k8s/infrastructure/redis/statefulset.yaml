@@ -22,7 +22,7 @@ spec:
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
-            - c
+            - -c
             - exec redis-server --requirepass "$REDIS_PASSWORD"
           ports:
             - containerPort: 6379
@@ -45,7 +45,7 @@ spec:
             exec:
               command:
                 - /bin/sh
-                - c
+                - -c
                 - redis-cli -a "$REDIS_PASSWORD" ping
             initialDelaySeconds: 5
             periodSeconds: 5
@@ -53,7 +53,7 @@ spec:
             exec:
               command:
                 - /bin/sh
-                - c
+                - -c
                 - redis-cli -a "$REDIS_PASSWORD" ping
             initialDelaySeconds: 15
             periodSeconds: 10
