@@ -49,6 +49,22 @@ class SensorReadingIntegrationTest {
             .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
+    @Test
+    @SneakyThrows
+    void postAndGetReturnTheSameTimestamp() {
+        mockMvc.perform(post("/v1/readings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"sensorId": "it-sensor-4", "value": 1.0, "timestamp": "2026-11-16T10:15:30.123456789Z"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.timestamp").value("2026-11-16T10:15:30.123456Z"));
+
+        mockMvc.perform(get("/v1/readings/it-sensor-4"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].timestamp").value("2026-11-16T10:15:30.123456Z"));
+    }
+
     @SneakyThrows
     private void postReading(String sensorId, double value, String timestamp) {
         mockMvc.perform(post("/v1/readings")

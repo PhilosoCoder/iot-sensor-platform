@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,9 +48,20 @@ class SensorReadingServiceTest {
     }
 
     @Test
+    void createReadingTruncatesTimestampToMicroseconds() {
+        when(sensorReadingRepository.save(any(SensorReading.class))).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        var result = sensorReadingService.createReading(
+            new CreateSensorReadingRequest("sensor-1", 21.5, Instant.parse("2026-11-16T10:15:30.123456789Z")));
+
+        assertThat(result.getTimestamp()).isEqualTo(Instant.parse("2026-11-16T10:15:30.123456Z"));
+    }
+
+    @Test
     void createReadingDefaultsTimestampToNowWhenMissing() {
         when(sensorReadingRepository.save(any(SensorReading.class))).thenAnswer(invocation -> withId(invocation.getArgument(0)));
-        var before = Instant.now();
+        // Truncated like the stored value, otherwise "now" may land before "before" within the same microsecond.
+        var before = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         sensorReadingService.createReading(new CreateSensorReadingRequest("sensor-1", 21.5, null));
 

@@ -1,6 +1,7 @@
 package com.iotsensor.ingestion.service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import com.iotsensor.ingestion.dto.CreateSensorReadingRequest;
@@ -23,6 +24,8 @@ public class SensorReadingService {
         if (reading.getTimestamp() == null) {
             reading.setTimestamp(Instant.now());
         }
+        // The database stores microseconds; truncate so the POST response matches what GET returns later.
+        reading.setTimestamp(reading.getTimestamp().truncatedTo(ChronoUnit.MICROS));
         var saved = sensorReadingRepository.save(reading);
         return sensorReadingMapper.entityToDto(saved);
     }
