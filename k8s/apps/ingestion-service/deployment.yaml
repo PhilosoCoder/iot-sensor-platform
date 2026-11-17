@@ -39,6 +39,11 @@ spec:
           resources:
             # Memory request == limit: the JVM heap is sized from the limit (75%, see Dockerfile),
             # so the pod should be guaranteed that memory.
+            #
+            # GC: with these limits the JVM picks SerialGC, which is fine at this size. JDK 25 only
+            # auto-selects G1 when the container has >= 2 CPUs AND ~1792Mi memory; raising the CPU
+            # limit alone is not enough. For load testing, either raise both, or add -XX:+UseG1GC to
+            # JAVA_TOOL_OPTIONS together with a CPU limit >= 2 (G1 is less efficient on a single core).
             requests:
               cpu: 250m
               memory: 512Mi
