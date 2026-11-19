@@ -7,6 +7,17 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  data:
+    web:
+      # Equivalent to @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO), but keeps Boot's
+      # auto-configuration: declaring the annotation ourselves makes it back off and the page-size
+      # settings below would be silently ignored.
+      pageable:
+        # Page<T> is serialized as {content, page: {size, number, totalElements, totalPages}}.
+        serialization-mode: via-dto
+        default-page-size: 50
+        # Larger requested sizes are capped to this value (not rejected).
+        max-page-size: 500
   mvc:
     problemdetails:
       # RFC 9457 application/problem+json error bodies. 400s additionally carry an

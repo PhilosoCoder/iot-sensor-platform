@@ -1,10 +1,10 @@
 package com.iotsensor.ingestion.controller;
 
-import java.util.List;
-
 import com.iotsensor.ingestion.dto.SensorDto;
 import com.iotsensor.ingestion.service.SensorService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,9 +16,10 @@ public class SensorController {
 
     private final SensorService sensorService;
 
+    /** Ordered by id. Paging via {@code page} (0-based) and {@code size} (default 50, capped at 500); {@code sort} is ignored. */
     @GetMapping
-    public List<SensorDto> listSensors() {
-        return sensorService.listSensors();
+    public Page<SensorDto> listSensors(Pageable pageable) {
+        return sensorService.listSensors(pageable);
     }
 
 }

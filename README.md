@@ -90,11 +90,28 @@ curl -X POST localhost:8080/v1/readings \
   -H 'Content-Type: application/json' \
   -d '{"sensorId":"sensor-1","value":21.5}'
 
-curl localhost:8080/v1/readings/sensor-1
+curl localhost:8080/v1/sensors/sensor-1/readings
 
-# Optional time range: from is inclusive, to is exclusive (ISO-8601 instants)
-curl 'localhost:8080/v1/readings/sensor-1?from=2026-11-16T10:00:00Z&to=2026-11-16T11:00:00Z'
+# Optional time range (from inclusive, to exclusive, ISO-8601 instants) and paging
+curl 'localhost:8080/v1/sensors/sensor-1/readings?from=2026-11-16T10:00:00Z&to=2026-11-16T11:00:00Z&page=0&size=100'
+
+curl localhost:8080/v1/sensors
 ```
+
+List endpoints are paginated:
+
+```json
+{
+  "content": [
+    {"id": "…", "sensorId": "sensor-1", "value": 21.5, "measuredAt": "2026-11-16T10:15:30.123456Z"}
+  ],
+  "page": {"size": 50, "number": 0, "totalElements": 1, "totalPages": 1}
+}
+```
+
+- `page` is 0-based. `size` defaults to 50; larger values than 500 are capped to 500.
+- The order is fixed and `sort` is ignored: readings are newest first (id as tie-breaker, so pages are stable),
+  sensors are ordered by id.
 
 Invalid requests return `400` with an RFC 9457 `application/problem+json` body that lists every invalid field:
 

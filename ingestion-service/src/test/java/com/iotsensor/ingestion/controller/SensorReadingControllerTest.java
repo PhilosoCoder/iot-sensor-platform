@@ -1,6 +1,9 @@
 package com.iotsensor.ingestion.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -22,13 +25,19 @@ import com.iotsensor.ingestion.exception.InvalidTimeRangeException;
 import com.iotsensor.ingestion.service.SensorReadingService;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(SensorReadingController.class)
 @Import(ValidationConfig.class)
@@ -181,33 +190,68 @@ class SensorReadingControllerTest {
 
     @Test
     @SneakyThrows
-    void listReadingsReturnsReadingsForSensor() {
+    void listReadingsReturnsPageOfReadings() {
         var readings = List.of(
             new SensorReadingDto(UUID.randomUUID(), "sensor-1", 22.0, Instant.parse("2026-11-16T10:20:00Z")),
             new SensorReadingDto(UUID.randomUUID(), "sensor-1", 21.5, Instant.parse("2026-11-16T10:15:00Z"))
         );
+        when(sensorReadingService.listReadings(eq("sensor-1"), isNull(), isNull(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(readings, PageRequest.of(1, 2), 5));
 
-        when(sensorReadingService.listReadings("sensor-1", null, null)).thenReturn(readings);
-
-        mockMvc.perform(get("/v1/readings/sensor-1"))
+        mockMvc.perform(get("/v1/sensors/sensor-1/readings").param("page", "1").param("size", "2"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].sensorId").value("sensor-1"))
-            .andExpect(jsonPath("$[0].value").value(22.0))
-            .andExpect(jsonPath("$[0].measuredAt").value("2026-11-16T10:20:00Z"))
-            .andExpect(jsonPath("$[1].value").value(21.5));
-
-        verify(sensorReadingService).listReadings("sensor-1", null, null);
+            .andExpect(jsonPath("$.content.length()").value(2))
+            .andExpect(jsonPath("$.content[0].sensorId").value("sensor-1"))
+            .andExpect(jsonPath("$.content[0].value").value(22.0))
+            .andExpect(jsonPath("$.content[0].measuredAt").value("2026-11-16T10:20:00Z"))
+            .andExpect(jsonPath("$.content[1].value").value(21.5))
+            .andExpect(jsonPath("$.page.size").value(2))
+            .andExpect(jsonPath("$.page.number").value(1))
+            .andExpect(jsonPath("$.page.totalElements").value(5))
+            .andExpect(jsonPath("$.page.totalPages").value(3))
+            // VIA_DTO: no Spring Data internals (pageable, sort, ...) leak into the response
+            .andExpect(jsonPath("$.pageable").doesNotExist())
+            .andExpect(jsonPath("$.sort").doesNotExist());
     }
 
     @Test
     @SneakyThrows
-    void listReadingsReturnsEmptyListForUnknownSensor() {
-        when(sensorReadingService.listReadings("unknown", null, null)).thenReturn(List.of());
+    void listReadingsReturnsEmptyPageForUnknownSensor() {
+        when(sensorReadingService.listReadings(eq("unknown"), isNull(), isNull(), any(Pageable.class)))
+            .thenReturn(Page.empty(PageRequest.of(0, 50)));
 
-        mockMvc.perform(get("/v1/readings/unknown"))
+        mockMvc.perform(get("/v1/sensors/unknown/readings"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(0));
+            .andExpect(jsonPath("$.content.length()").value(0))
+            .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
+    @Test
+    @SneakyThrows
+    void listReadingsUsesDefaultPageSizeOf50() {
+        var pageable = performListReadingsAndCapturePageable(get("/v1/sensors/sensor-1/readings"));
+
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(50);
+    }
+
+    @Test
+    @SneakyThrows
+    void listReadingsPassesRequestedPageAndSize() {
+        var pageable = performListReadingsAndCapturePageable(
+            get("/v1/sensors/sensor-1/readings").param("page", "3").param("size", "20"));
+
+        assertThat(pageable.getPageNumber()).isEqualTo(3);
+        assertThat(pageable.getPageSize()).isEqualTo(20);
+    }
+
+    @Test
+    @SneakyThrows
+    void listReadingsCapsPageSizeAt500() {
+        var pageable = performListReadingsAndCapturePageable(
+            get("/v1/sensors/sensor-1/readings").param("size", "10000"));
+
+        assertThat(pageable.getPageSize()).isEqualTo(500);
     }
 
     @Test
@@ -215,20 +259,30 @@ class SensorReadingControllerTest {
     void listReadingsPassesTimeRangeToService() {
         var from = Instant.parse("2026-11-16T10:00:00Z");
         var to = Instant.parse("2026-11-16T11:00:00Z");
-        when(sensorReadingService.listReadings("sensor-1", from, to)).thenReturn(List.of());
+        when(sensorReadingService.listReadings(eq("sensor-1"), eq(from), eq(to), any(Pageable.class)))
+            .thenReturn(Page.empty());
 
-        mockMvc.perform(get("/v1/readings/sensor-1")
+        mockMvc.perform(get("/v1/sensors/sensor-1/readings")
                 .param("from", "2026-11-16T10:00:00Z")
                 .param("to", "2026-11-16T11:00:00Z"))
             .andExpect(status().isOk());
 
-        verify(sensorReadingService).listReadings("sensor-1", from, to);
+        verify(sensorReadingService).listReadings(eq("sensor-1"), eq(from), eq(to), any(Pageable.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void oldReadingsPathIsGone() {
+        mockMvc.perform(get("/v1/readings/sensor-1"))
+            .andExpect(status().isNotFound());
+
+        verifyNoInteractions(sensorReadingService);
     }
 
     @Test
     @SneakyThrows
     void listReadingsRejectsInvalidSensorIdInPath() {
-        mockMvc.perform(get("/v1/readings/{sensorId}", "bad!id"))
+        mockMvc.perform(get("/v1/sensors/{sensorId}/readings", "bad!id"))
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.errors.length()").value(1))
@@ -241,7 +295,7 @@ class SensorReadingControllerTest {
     @Test
     @SneakyThrows
     void listReadingsRejectsTooLongSensorIdInPath() {
-        mockMvc.perform(get("/v1/readings/{sensorId}", "a".repeat(65)))
+        mockMvc.perform(get("/v1/sensors/{sensorId}/readings", "a".repeat(65)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.errors[0].field").value("sensorId"))
             .andExpect(jsonPath("$.errors[0].message").value("must be at most 64 characters"));
@@ -252,7 +306,7 @@ class SensorReadingControllerTest {
     @Test
     @SneakyThrows
     void listReadingsRejectsUnparseableTimestamp() {
-        mockMvc.perform(get("/v1/readings/sensor-1").param("from", "yesterday"))
+        mockMvc.perform(get("/v1/sensors/sensor-1/readings").param("from", "yesterday"))
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.errors.length()").value(1))
@@ -267,9 +321,10 @@ class SensorReadingControllerTest {
     void listReadingsMapsInvalidTimeRangeToBadRequest() {
         var from = Instant.parse("2026-11-16T11:00:00Z");
         var to = Instant.parse("2026-11-16T10:00:00Z");
-        when(sensorReadingService.listReadings("sensor-1", from, to)).thenThrow(new InvalidTimeRangeException(from, to));
+        when(sensorReadingService.listReadings(eq("sensor-1"), eq(from), eq(to), any(Pageable.class)))
+            .thenThrow(new InvalidTimeRangeException(from, to));
 
-        mockMvc.perform(get("/v1/readings/sensor-1")
+        mockMvc.perform(get("/v1/sensors/sensor-1/readings")
                 .param("from", "2026-11-16T11:00:00Z")
                 .param("to", "2026-11-16T10:00:00Z"))
             .andExpect(status().isBadRequest())
@@ -287,6 +342,17 @@ class SensorReadingControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @SneakyThrows
+    private Pageable performListReadingsAndCapturePageable(MockHttpServletRequestBuilder request) {
+        when(sensorReadingService.listReadings(any(), any(), any(), any(Pageable.class))).thenReturn(Page.empty());
+
+        mockMvc.perform(request).andExpect(status().isOk());
+
+        var captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(sensorReadingService).listReadings(eq("sensor-1"), isNull(), isNull(), captor.capture());
+        return captor.getValue();
     }
 
     @SneakyThrows

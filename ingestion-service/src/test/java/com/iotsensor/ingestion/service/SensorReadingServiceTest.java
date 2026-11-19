@@ -3,6 +3,8 @@ package com.iotsensor.ingestion.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -23,6 +25,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 class SensorReadingServiceTest {
@@ -74,13 +81,16 @@ class SensorReadingServiceTest {
     }
 
     @Test
-    void listReadingsMapsRepositoryResults() {
+    void listReadingsMapsRepositoryPage() {
         var reading = new SensorReading(UUID.randomUUID(), "sensor-1", 21.5, Instant.parse("2026-11-16T10:15:30Z"));
-        when(sensorReadingRepository.findInRangeNewestFirst("sensor-1", null, null)).thenReturn(List.of(reading));
+        when(sensorReadingRepository.findInRange(eq("sensor-1"), isNull(), isNull(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(reading), PageRequest.of(0, 1, SensorReadingRepository.NEWEST_FIRST), 3));
 
-        var result = sensorReadingService.listReadings("sensor-1", null, null);
+        var result = sensorReadingService.listReadings("sensor-1", null, null, PageRequest.of(0, 1));
 
-        assertThat(result).singleElement().satisfies(dto -> {
+        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getTotalPages()).isEqualTo(3);
+        assertThat(result.getContent()).singleElement().satisfies(dto -> {
             assertThat(dto.getId()).isEqualTo(reading.getId());
             assertThat(dto.getSensorId()).isEqualTo("sensor-1");
             assertThat(dto.getValue()).isEqualTo(21.5);
@@ -89,25 +99,40 @@ class SensorReadingServiceTest {
     }
 
     @Test
+    void listReadingsKeepsPageAndSizeButForcesNewestFirstSort() {
+        stubEmptyPage();
+        var clientRequest = PageRequest.of(3, 20, Sort.by(Sort.Order.asc("value")));
+
+        sensorReadingService.listReadings("sensor-1", null, null, clientRequest);
+
+        var captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(sensorReadingRepository).findInRange(eq("sensor-1"), isNull(), isNull(), captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(3);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(20);
+        assertThat(captor.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.desc("measuredAt"), Sort.Order.desc("id")));
+    }
+
+    @Test
     void listReadingsPassesTimeRangeToRepository() {
+        stubEmptyPage();
         var from = Instant.parse("2026-11-16T10:00:00Z");
         var to = Instant.parse("2026-11-16T11:00:00Z");
-        when(sensorReadingRepository.findInRangeNewestFirst("sensor-1", from, to)).thenReturn(List.of());
 
-        assertThat(sensorReadingService.listReadings("sensor-1", from, to)).isEmpty();
+        assertThat(sensorReadingService.listReadings("sensor-1", from, to, PageRequest.of(0, 50))).isEmpty();
 
-        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", from, to);
+        verify(sensorReadingRepository).findInRange(eq("sensor-1"), eq(from), eq(to), any(Pageable.class));
     }
 
     @Test
     void listReadingsAllowsOpenEndedRanges() {
+        stubEmptyPage();
         var bound = Instant.parse("2026-11-16T10:00:00Z");
 
-        sensorReadingService.listReadings("sensor-1", bound, null);
-        sensorReadingService.listReadings("sensor-1", null, bound);
+        sensorReadingService.listReadings("sensor-1", bound, null, PageRequest.of(0, 50));
+        sensorReadingService.listReadings("sensor-1", null, bound, PageRequest.of(0, 50));
 
-        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", bound, null);
-        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", null, bound);
+        verify(sensorReadingRepository).findInRange(eq("sensor-1"), eq(bound), isNull(), any(Pageable.class));
+        verify(sensorReadingRepository).findInRange(eq("sensor-1"), isNull(), eq(bound), any(Pageable.class));
     }
 
     @Test
@@ -115,7 +140,7 @@ class SensorReadingServiceTest {
         var from = Instant.parse("2026-11-16T11:00:00Z");
         var to = Instant.parse("2026-11-16T10:00:00Z");
 
-        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", from, to))
+        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", from, to, PageRequest.of(0, 50)))
             .isInstanceOf(InvalidTimeRangeException.class);
 
         verifyNoInteractions(sensorReadingRepository);
@@ -125,10 +150,14 @@ class SensorReadingServiceTest {
     void listReadingsRejectsEmptyRange() {
         var instant = Instant.parse("2026-11-16T10:00:00Z");
 
-        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", instant, instant))
+        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", instant, instant, PageRequest.of(0, 50)))
             .isInstanceOf(InvalidTimeRangeException.class);
 
         verifyNoInteractions(sensorReadingRepository);
+    }
+
+    private void stubEmptyPage() {
+        when(sensorReadingRepository.findInRange(any(), any(), any(), any(Pageable.class))).thenReturn(Page.empty());
     }
 
     private static SensorReading withId(SensorReading reading) {
