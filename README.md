@@ -93,4 +93,5 @@ curl -X POST localhost:8080/v1/readings \
 curl localhost:8080/v1/readings/sensor-1
 ```
 
-> Storage is still in-memory (H2) at this stage: readings are lost when the pod restarts.
+> Readings are stored in PostgreSQL (schema managed by Flyway), so they survive pod restarts.
+> The readiness probe includes the DB health check: if PostgreSQL is unreachable, pods are taken out of the Service but not restarted.

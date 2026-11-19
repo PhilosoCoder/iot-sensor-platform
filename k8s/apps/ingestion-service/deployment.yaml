@@ -4,9 +4,9 @@ metadata:
   name: ingestion-service
   namespace: iot-sensor-platform
 spec:
-  # Single replica while storage is in-memory H2: each pod would have its own data.
-  # Scale out once PostgreSQL is wired in (Phase 2).
-  replicas: 1
+  # State lives in PostgreSQL, so pods are interchangeable. Flyway takes a PostgreSQL
+  # advisory lock while migrating, so both pods can start at the same time safely.
+  replicas: 2
   selector:
     matchLabels:
       app: ingestion-service
@@ -31,6 +31,22 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: ingestion-service-config
+          env:
+            # TODO(hardening): the app connects as the postgres superuser. Create a dedicated
+            # least-privilege role (separate migration vs. runtime users) in a later phase.
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_PASSWORD
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -68,6 +84,7 @@ spec:
             timeoutSeconds: 2
             failureThreshold: 3
           # Failing -> pod is removed from the Service endpoints, but not restarted.
+          # Includes the DB check (see application.yaml), so a pod that cannot reach PostgreSQL stops receiving traffic.
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

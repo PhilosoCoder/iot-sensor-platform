@@ -23,3 +23,8 @@ management:
         # Auto-enabled on Kubernetes; set explicitly so they also work locally.
         # Keep external dependencies (DB, Kafka) out of liveness - otherwise an outage restarts every pod.
         enabled: true
+      group:
+        readiness:
+          # A pod without a working DB connection is taken out of the Service, but not restarted:
+          # liveness keeps its default (livenessState only).
+          include: readinessState,db

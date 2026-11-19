@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingestion-service-config
+  namespace: iot-sensor-platform
+data:
+  # Non-secret settings only. Credentials come from postgresql-secret (see deployment.yaml).
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/iot_sensor_platform
