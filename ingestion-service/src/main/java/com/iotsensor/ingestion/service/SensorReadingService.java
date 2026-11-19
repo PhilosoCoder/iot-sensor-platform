@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.iotsensor.ingestion.dto.CreateSensorReadingRequest;
 import com.iotsensor.ingestion.dto.SensorReadingDto;
+import com.iotsensor.ingestion.exception.InvalidTimeRangeException;
 import com.iotsensor.ingestion.mapper.SensorReadingMapper;
 import com.iotsensor.ingestion.repository.SensorReadingRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +31,11 @@ public class SensorReadingService {
         return sensorReadingMapper.entityToDto(saved);
     }
 
-    public List<SensorReadingDto> listReadings(String sensorId) {
-        var readings = sensorReadingRepository.findBySensorIdOrderByMeasuredAtDesc(sensorId);
+    public List<SensorReadingDto> listReadings(String sensorId, Instant from, Instant to) {
+        if (from != null && to != null && !from.isBefore(to)) {
+            throw new InvalidTimeRangeException(from, to);
+        }
+        var readings = sensorReadingRepository.findInRangeNewestFirst(sensorId, from, to);
         return readings.stream().map(sensorReadingMapper::entityToDto).toList();
     }
 

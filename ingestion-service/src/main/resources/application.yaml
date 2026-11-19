@@ -7,6 +7,16 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  mvc:
+    problemdetails:
+      # RFC 9457 application/problem+json error bodies. 400s additionally carry an
+      # "errors: [{field, message}]" list, see ValidationExceptionHandler.
+      enabled: true
+
+ingestion:
+  validation:
+    # How far in the future measuredAt may be and still pass @PastOrPresent (device clock drift).
+    clock-drift-tolerance: 5m
 
 server:
   port: 8080

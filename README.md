@@ -91,7 +91,38 @@ curl -X POST localhost:8080/v1/readings \
   -d '{"sensorId":"sensor-1","value":21.5}'
 
 curl localhost:8080/v1/readings/sensor-1
+
+# Optional time range: from is inclusive, to is exclusive (ISO-8601 instants)
+curl 'localhost:8080/v1/readings/sensor-1?from=2026-11-16T10:00:00Z&to=2026-11-16T11:00:00Z'
 ```
+
+Invalid requests return `400` with an RFC 9457 `application/problem+json` body that lists every invalid field:
+
+```bash
+curl -X POST localhost:8080/v1/readings \
+  -H 'Content-Type: application/json' \
+  -d '{"sensorId":"bad id"}'
+```
+
+```json
+{
+  "detail": "Invalid request content.",
+  "instance": "/v1/readings",
+  "status": 400,
+  "title": "Bad Request",
+  "errors": [
+    {"field": "sensorId", "message": "may only contain letters, digits, '.', '_' and '-'"},
+    {"field": "value", "message": "must not be null"}
+  ]
+}
+```
+
+Validation rules:
+- `sensorId`: required, at most 64 characters, only letters, digits, `.`, `_`, `-` (in the body and in the path).
+- `value`: required.
+- `measuredAt`: optional (defaults to now), must not be in the future. A small amount of device clock drift is
+  tolerated (`ingestion.validation.clock-drift-tolerance`, default `5m`).
+- `from` must be before `to`.
 
 > Readings are stored in PostgreSQL (schema managed by Flyway), so they survive pod restarts.
 > The readiness probe includes the DB health check: if PostgreSQL is unreachable, pods are taken out of the Service but not restarted.

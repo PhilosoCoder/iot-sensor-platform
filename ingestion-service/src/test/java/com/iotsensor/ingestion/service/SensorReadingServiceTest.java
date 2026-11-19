@@ -1,8 +1,10 @@
 package com.iotsensor.ingestion.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -12,6 +14,7 @@ import java.util.UUID;
 
 import com.iotsensor.ingestion.dto.CreateSensorReadingRequest;
 import com.iotsensor.ingestion.entity.SensorReading;
+import com.iotsensor.ingestion.exception.InvalidTimeRangeException;
 import com.iotsensor.ingestion.mapper.SensorReadingMapperImpl;
 import com.iotsensor.ingestion.repository.SensorReadingRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,9 +76,9 @@ class SensorReadingServiceTest {
     @Test
     void listReadingsMapsRepositoryResults() {
         var reading = new SensorReading(UUID.randomUUID(), "sensor-1", 21.5, Instant.parse("2026-11-16T10:15:30Z"));
-        when(sensorReadingRepository.findBySensorIdOrderByMeasuredAtDesc("sensor-1")).thenReturn(List.of(reading));
+        when(sensorReadingRepository.findInRangeNewestFirst("sensor-1", null, null)).thenReturn(List.of(reading));
 
-        var result = sensorReadingService.listReadings("sensor-1");
+        var result = sensorReadingService.listReadings("sensor-1", null, null);
 
         assertThat(result).singleElement().satisfies(dto -> {
             assertThat(dto.getId()).isEqualTo(reading.getId());
@@ -83,6 +86,49 @@ class SensorReadingServiceTest {
             assertThat(dto.getValue()).isEqualTo(21.5);
             assertThat(dto.getMeasuredAt()).isEqualTo(reading.getMeasuredAt());
         });
+    }
+
+    @Test
+    void listReadingsPassesTimeRangeToRepository() {
+        var from = Instant.parse("2026-11-16T10:00:00Z");
+        var to = Instant.parse("2026-11-16T11:00:00Z");
+        when(sensorReadingRepository.findInRangeNewestFirst("sensor-1", from, to)).thenReturn(List.of());
+
+        assertThat(sensorReadingService.listReadings("sensor-1", from, to)).isEmpty();
+
+        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", from, to);
+    }
+
+    @Test
+    void listReadingsAllowsOpenEndedRanges() {
+        var bound = Instant.parse("2026-11-16T10:00:00Z");
+
+        sensorReadingService.listReadings("sensor-1", bound, null);
+        sensorReadingService.listReadings("sensor-1", null, bound);
+
+        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", bound, null);
+        verify(sensorReadingRepository).findInRangeNewestFirst("sensor-1", null, bound);
+    }
+
+    @Test
+    void listReadingsRejectsFromAfterTo() {
+        var from = Instant.parse("2026-11-16T11:00:00Z");
+        var to = Instant.parse("2026-11-16T10:00:00Z");
+
+        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", from, to))
+            .isInstanceOf(InvalidTimeRangeException.class);
+
+        verifyNoInteractions(sensorReadingRepository);
+    }
+
+    @Test
+    void listReadingsRejectsEmptyRange() {
+        var instant = Instant.parse("2026-11-16T10:00:00Z");
+
+        assertThatThrownBy(() -> sensorReadingService.listReadings("sensor-1", instant, instant))
+            .isInstanceOf(InvalidTimeRangeException.class);
+
+        verifyNoInteractions(sensorReadingRepository);
     }
 
     private static SensorReading withId(SensorReading reading) {
