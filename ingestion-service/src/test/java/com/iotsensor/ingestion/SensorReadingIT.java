@@ -15,23 +15,12 @@ import java.util.HashSet;
 import com.jayway.jsonpath.JsonPath;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Every test uses its own sensor IDs: the database is shared by all tests in this class.
+ * Every test uses its own sensor IDs: the database is shared by all integration tests.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
-class SensorReadingIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+class SensorReadingIT extends IngestionIT {
 
     @Test
     @SneakyThrows
