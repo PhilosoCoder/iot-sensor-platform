@@ -18,7 +18,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: redis
-          image: redis:7
+          image: redis:8.10
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh

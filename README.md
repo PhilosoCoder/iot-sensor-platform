@@ -24,6 +24,27 @@ minikube start --cpus=4 --memory=7800
 ./k8s/scripts/bootstrap.sh
 ```
 
+It installs the Strimzi operator in the version pinned by `STRIMZI_VERSION` in the script, then PostgreSQL, Redis
+and the Kafka cluster.
+
+> **Behind a TLS-intercepting proxy** (Strimzi pods stuck in `ErrImagePull`/`ErrImageNeverPull`, events show
+> `x509: certificate signed by unknown authority` for `quay.io`): minikube doesn't trust the proxy's certificate, but
+> the host Docker does. Pull the Strimzi images on the host, load them into minikube, then wait for the pods (or
+> re-run the script):
+>
+> ```bash
+> docker pull quay.io/strimzi/operator:1.3.1
+> docker pull quay.io/strimzi/kafka:1.3.1-kafka-4.3.2
+> minikube image load quay.io/strimzi/operator:1.3.1 quay.io/strimzi/kafka:1.3.1-kafka-4.3.2
+> ```
+>
+> The tags are `operator:<STRIMZI_VERSION>` and `kafka:<STRIMZI_VERSION>-kafka-<spec.kafka.version in kafka.yaml>`.
+
+> **Upgrading Strimzi or Kafka:** bump `STRIMZI_VERSION` (in `bootstrap.sh`) and/or `spec.kafka.version` (in
+> `k8s/infrastructure/kafka/kafka.yaml`) and re-run the script. It upgrades the operator before applying the Kafka
+> resource, which matters because a Kafka version is only accepted by operators that support it (see the Strimzi
+> release notes). The operator then rolls the Kafka pods to the new version.
+
 ### 3. Verify everything is running
 
 ```bash
@@ -41,6 +62,7 @@ redis-0        1/1     Running   0          ...
 # kafka namespace
 NAME                                        READY   STATUS    RESTARTS   AGE
 iot-kafka-dual-role-0                       1/1     Running   0          ...
+iot-kafka-entity-operator-xxx               2/2     Running   0          ...
 strimzi-cluster-operator-xxx                1/1     Running   0          ...
 ```
 
