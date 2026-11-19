@@ -3,7 +3,7 @@ IoT Sensor Monitoring Platform — A real-time data ingestion and processing sys
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (also needed for `./gradlew test` and `bootTestRun`, see below)
 - [minikube](https://minikube.sigs.k8s.io/docs/start/) 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [helm](https://helm.sh/docs/intro/install/)
@@ -73,6 +73,16 @@ After rebuilding and re-loading the image under the same tag, restart the pods s
 
 ```bash
 kubectl rollout restart deployment/ingestion-service -n iot-sensor-platform
+```
+
+The same restart is needed after changing `configmap.yaml` (or `postgresql-secret`): the values are injected as
+environment variables, which are only read when a container starts. `kubectl apply` updates the ConfigMap, but the
+running pods keep the old values:
+
+```bash
+kubectl apply -f k8s/apps/ingestion-service/configmap.yaml
+kubectl rollout restart deployment/ingestion-service -n iot-sensor-platform
+kubectl rollout status deployment/ingestion-service -n iot-sensor-platform
 ```
 
 ### 6. Try it out
@@ -146,3 +156,26 @@ Validation rules:
 
 > Readings are stored in PostgreSQL (schema managed by Flyway), so they survive pod restarts.
 > The readiness probe includes the DB health check: if PostgreSQL is unreachable, pods are taken out of the Service but not restarted.
+
+## Running the ingestion-service without Kubernetes
+
+For a quick edit-run loop, start the service directly from Gradle. Only Docker needs to be running; minikube is not
+needed:
+
+```bash
+./gradlew :ingestion-service:bootTestRun
+```
+
+This starts a throwaway PostgreSQL 18 container via Testcontainers (see `TestcontainersConfiguration`), points the
+service at it, lets Flyway create the schema, and serves the API on http://localhost:8080. The curl examples and
+the Swagger UI above work unchanged. The container and its data are removed when you stop the service (Ctrl+C).
+
+## Tests
+
+```bash
+./gradlew test
+```
+
+Docker must be running: the `@SpringBootTest` integration tests start a PostgreSQL 18 container via Testcontainers,
+so migrations and queries are tested against the same database as in Kubernetes. Without Docker, those tests fail
+at startup. Unit tests and `@WebMvcTest` controller tests don't need Docker.
