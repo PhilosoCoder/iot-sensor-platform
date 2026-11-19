@@ -15,7 +15,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * A sensor ID as accepted by the API: same rules for request bodies and path variables.
  * The max length matches the VARCHAR(64) columns in the database.
  * Each violated rule is reported separately, with its own message.
  */

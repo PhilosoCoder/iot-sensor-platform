@@ -9,9 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Pageable;
 
-/**
- * Spec at {@code /v3/api-docs}, Swagger UI at {@code /swagger-ui.html}.
- */
 @Configuration(proxyBeanMethods = false)
 public class OpenApiConfig {
 

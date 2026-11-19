@@ -20,7 +20,6 @@ public class SensorController {
 
     private final SensorService sensorService;
 
-    /** Ordered by id. Paging via {@code page} (0-based) and {@code size} (default 50, capped at 500); {@code sort} is ignored. */
     @Operation(summary = "List sensors", description = "Ordered by id. `size` defaults to 50 and is capped at 500; `sort` is ignored.")
     @GetMapping
     public Page<SensorDto> listSensors(@ParameterObject Pageable pageable) {

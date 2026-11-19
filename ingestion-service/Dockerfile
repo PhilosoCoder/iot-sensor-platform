@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # The jar is built on the host / in CI, not inside Docker (avoids corporate TLS-proxy issues
-# and keeps the image build fast):
-#   ./gradlew :ingestion-service:bootJar
-#   docker build -t ingestion-service:0.0.1-SNAPSHOT ingestion-service
+# and keeps the image build fast). Build commands: see README.
 
 # ---- Stage 1: split the jar into layers -------------------------------------------------
 # Dependencies change rarely, application code changes often: separate layers mean a code

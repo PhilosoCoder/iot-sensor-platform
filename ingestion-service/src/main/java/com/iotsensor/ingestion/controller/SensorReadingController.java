@@ -22,9 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Readings are written to {@code /v1/readings} and read as a sub-resource of their sensor.
- */
 @Tag(name = "Readings")
 @RestController
 @RequiredArgsConstructor
@@ -39,11 +36,6 @@ public class SensorReadingController {
         return sensorReadingService.createReading(request);
     }
 
-    /**
-     * Newest first. {@code from} (inclusive) and {@code to} (exclusive) are optional ISO-8601 instants,
-     * e.g. {@code 2026-11-16T10:00:00Z}. Paging via {@code page} (0-based) and {@code size}
-     * (default 50, capped at 500); {@code sort} is ignored.
-     */
     @Operation(
         summary = "List readings of a sensor",
         description = "Newest first. `from` is inclusive, `to` exclusive. `size` defaults to 50 and is capped at 500; `sort` is ignored.")

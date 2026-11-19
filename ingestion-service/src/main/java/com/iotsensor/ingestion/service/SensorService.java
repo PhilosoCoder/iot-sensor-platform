@@ -14,14 +14,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SensorService {
 
-    /** Fixed order so pages are stable; the id is unique, so no tie-breaker is needed. */
     static final Sort BY_ID = Sort.by("id");
 
     private final SensorRepository sensorRepository;
 
     private final SensorMapper sensorMapper;
 
-    /** Only page number and size are taken from {@code pageable}; any client-supplied sort is ignored. */
     public Page<SensorDto> listSensors(Pageable pageable) {
         var page = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), BY_ID);
         return sensorRepository.findAll(page).map(sensorMapper::entityToDto);
