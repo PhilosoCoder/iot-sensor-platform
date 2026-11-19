@@ -44,23 +44,32 @@ iot-kafka-dual-role-0                       1/1     Running   0          ...
 strimzi-cluster-operator-xxx                1/1     Running   0          ...
 ```
 
-### 4. Build the ingestion-service image and load it into minikube
+### 4. Build the ingestion-service image inside minikube
 
-The jar is built on the host, the Dockerfile only packages it (layered, non-root, container-aware JVM).
+The jar is built on the host, the Dockerfile only packages it (layered, non-root, container-aware JVM). The image is
+built directly in minikube's Docker daemon, so there is nothing to load or push:
 
 ```bash
 ./gradlew :ingestion-service:bootJar
-docker build -t ingestion-service:0.0.1-SNAPSHOT ingestion-service
-minikube image load ingestion-service:0.0.1-SNAPSHOT
+minikube image build -t ingestion-service:0.0.1-SNAPSHOT -f Dockerfile ingestion-service
 ```
 
-Verify the image is available inside minikube:
+Verify the image inside minikube is the one you just built (the age should be seconds or minutes, not days):
 
 ```bash
-minikube image ls | grep ingestion-service
+minikube ssh -- "docker images --format '{{.Repository}}:{{.Tag}}  {{.ID}}  {{.CreatedSince}}' ingestion-service"
 ```
 
-> Use a fixed tag (not `latest`): with `latest`, Kubernetes defaults to `imagePullPolicy: Always` and tries to pull from Docker Hub instead of using the loaded image.
+> Why not `docker build` + `minikube image load`? When a running pod uses the tag, `minikube image load` (even with
+> `--overwrite`) silently keeps the old image, so a rollout restart starts the old code again.
+>
+> `-f Dockerfile` is required: `.dockerignore` excludes everything except the jar, and without `-f` the Dockerfile
+> itself is left out of the context `minikube image build` sends.
+>
+> Avoid `eval $(minikube docker-env)` in your main shell: the variables stay set, and `./gradlew test` would then
+> start its Testcontainers inside minikube.
+
+> Use a fixed tag (not `latest`): with `latest`, Kubernetes defaults to `imagePullPolicy: Always` and tries to pull from Docker Hub instead of using the image built inside minikube.
 
 ### 5. Deploy the ingestion-service
 
@@ -69,10 +78,14 @@ kubectl apply -f k8s/apps/ingestion-service/
 kubectl rollout status deployment/ingestion-service -n iot-sensor-platform
 ```
 
-After rebuilding and re-loading the image under the same tag, restart the pods so they pick it up:
+After a code change, rebuild the jar and the image (step 4) under the same tag, then restart the pods so they pick it
+up. `kubectl apply` alone does nothing here, because the Deployment spec hasn't changed:
 
 ```bash
+./gradlew :ingestion-service:bootJar
+minikube image build -t ingestion-service:0.0.1-SNAPSHOT -f Dockerfile ingestion-service
 kubectl rollout restart deployment/ingestion-service -n iot-sensor-platform
+kubectl rollout status deployment/ingestion-service -n iot-sensor-platform
 ```
 
 The same restart is needed after changing `configmap.yaml` (or `postgresql-secret`): the values are injected as
