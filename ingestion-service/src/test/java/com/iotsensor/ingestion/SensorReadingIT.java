@@ -17,9 +17,6 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
-/**
- * Every test uses its own sensor IDs: the database is shared by all integration tests.
- */
 class SensorReadingIT extends IngestionIT {
 
     @Test
