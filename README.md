@@ -98,6 +98,9 @@ curl 'localhost:8080/v1/sensors/sensor-1/readings?from=2026-11-16T10:00:00Z&to=2
 curl localhost:8080/v1/sensors
 ```
 
+The API is also browsable in Swagger UI at http://localhost:8080/swagger-ui.html (OpenAPI spec at
+http://localhost:8080/v3/api-docs).
+
 List endpoints are paginated:
 
 ```json

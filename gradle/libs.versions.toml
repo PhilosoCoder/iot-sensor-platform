@@ -1,5 +1,6 @@
 [versions]
 mapStruct = "1.6.3"
+springdoc = "3.2.0"
 
 [libraries]
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
@@ -18,5 +19,6 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-jun
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
 mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapStruct" }
 mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapStruct" }
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }

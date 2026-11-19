@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.mapstruct)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
 
     compileOnly(libs.lombok)
 
