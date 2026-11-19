@@ -18,6 +18,6 @@ public class SensorReadingDto {
 
     private double value;
 
-    private Instant timestamp;
+    private Instant measuredAt;
 
 }

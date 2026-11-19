@@ -15,6 +15,6 @@ public class CreateSensorReadingRequest {
 
     private double value;
 
-    private Instant timestamp;
+    private Instant measuredAt;
 
 }

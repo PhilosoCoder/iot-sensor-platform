@@ -8,6 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SensorReadingRepository extends JpaRepository<SensorReading, UUID> {
 
-    List<SensorReading> findBySensorIdOrderByTimestampDesc(String sensorId);
+    List<SensorReading> findBySensorIdOrderByMeasuredAtDesc(String sensorId);
 
 }

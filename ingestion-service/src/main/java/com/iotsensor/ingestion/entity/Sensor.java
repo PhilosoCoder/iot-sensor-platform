@@ -1,5 +1,6 @@
 package com.iotsensor.ingestion.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class Sensor {
 
     @Id
+    @Column(length = 64)
     private String id;
 
     private String name;

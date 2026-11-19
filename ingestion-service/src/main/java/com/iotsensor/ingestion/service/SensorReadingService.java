@@ -21,17 +21,17 @@ public class SensorReadingService {
 
     public SensorReadingDto createReading(CreateSensorReadingRequest request) {
         var reading = sensorReadingMapper.requestToEntity(request);
-        if (reading.getTimestamp() == null) {
-            reading.setTimestamp(Instant.now());
+        if (reading.getMeasuredAt() == null) {
+            reading.setMeasuredAt(Instant.now());
         }
         // The database stores microseconds; truncate so the POST response matches what GET returns later.
-        reading.setTimestamp(reading.getTimestamp().truncatedTo(ChronoUnit.MICROS));
+        reading.setMeasuredAt(reading.getMeasuredAt().truncatedTo(ChronoUnit.MICROS));
         var saved = sensorReadingRepository.save(reading);
         return sensorReadingMapper.entityToDto(saved);
     }
 
     public List<SensorReadingDto> listReadings(String sensorId) {
-        var readings = sensorReadingRepository.findBySensorIdOrderByTimestampDesc(sensorId);
+        var readings = sensorReadingRepository.findBySensorIdOrderByMeasuredAtDesc(sensorId);
         return readings.stream().map(sensorReadingMapper::entityToDto).toList();
     }
 

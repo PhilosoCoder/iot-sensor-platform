@@ -36,8 +36,8 @@ class SensorReadingControllerTest {
     @SneakyThrows
     void createReadingReturnsCreatedReading() {
         var id = UUID.fromString("7b0c1f0e-3c1a-4d2a-9a51-2f5b6f1d9e01");
-        var timestamp = Instant.parse("2026-11-16T10:15:30Z");
-        var created = new SensorReadingDto(id, "sensor-1", 21.5, timestamp);
+        var measuredAt = Instant.parse("2026-11-16T10:15:30Z");
+        var created = new SensorReadingDto(id, "sensor-1", 21.5, measuredAt);
 
         when(sensorReadingService.createReading(any(CreateSensorReadingRequest.class))).thenReturn(created);
 
@@ -47,16 +47,16 @@ class SensorReadingControllerTest {
                     {
                       "sensorId": "sensor-1",
                       "value": 21.5,
-                      "timestamp": "2026-11-16T10:15:30Z"
+                      "measuredAt": "2026-11-16T10:15:30Z"
                     }
                     """))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(id.toString()))
             .andExpect(jsonPath("$.sensorId").value("sensor-1"))
             .andExpect(jsonPath("$.value").value(21.5))
-            .andExpect(jsonPath("$.timestamp").value("2026-11-16T10:15:30Z"));
+            .andExpect(jsonPath("$.measuredAt").value("2026-11-16T10:15:30Z"));
 
-        verify(sensorReadingService).createReading(new CreateSensorReadingRequest("sensor-1", 21.5, timestamp));
+        verify(sensorReadingService).createReading(new CreateSensorReadingRequest("sensor-1", 21.5, measuredAt));
     }
 
     @Test
@@ -74,7 +74,7 @@ class SensorReadingControllerTest {
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].sensorId").value("sensor-1"))
             .andExpect(jsonPath("$[0].value").value(22.0))
-            .andExpect(jsonPath("$[0].timestamp").value("2026-11-16T10:20:00Z"))
+            .andExpect(jsonPath("$[0].measuredAt").value("2026-11-16T10:20:00Z"))
             .andExpect(jsonPath("$[1].value").value(21.5));
 
         verify(sensorReadingService).listReadings("sensor-1");

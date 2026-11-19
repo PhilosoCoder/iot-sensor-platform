@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestcontainersConfiguration.class)
 class SensorReadingIntegrationTest {
 
     @Autowired
@@ -38,7 +40,7 @@ class SensorReadingIntegrationTest {
 
     @Test
     @SneakyThrows
-    void postedReadingWithoutTimestampGetsOne() {
+    void postedReadingWithoutMeasuredAtGetsOne() {
         mockMvc.perform(post("/v1/readings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -46,32 +48,32 @@ class SensorReadingIntegrationTest {
                     """))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").isNotEmpty())
-            .andExpect(jsonPath("$.timestamp").isNotEmpty());
+            .andExpect(jsonPath("$.measuredAt").isNotEmpty());
     }
 
     @Test
     @SneakyThrows
-    void postAndGetReturnTheSameTimestamp() {
+    void postAndGetReturnTheSameMeasuredAt() {
         mockMvc.perform(post("/v1/readings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"sensorId": "it-sensor-4", "value": 1.0, "timestamp": "2026-11-16T10:15:30.123456789Z"}
+                    {"sensorId": "it-sensor-4", "value": 1.0, "measuredAt": "2026-11-16T10:15:30.123456789Z"}
                     """))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.timestamp").value("2026-11-16T10:15:30.123456Z"));
+            .andExpect(jsonPath("$.measuredAt").value("2026-11-16T10:15:30.123456Z"));
 
         mockMvc.perform(get("/v1/readings/it-sensor-4"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].timestamp").value("2026-11-16T10:15:30.123456Z"));
+            .andExpect(jsonPath("$[0].measuredAt").value("2026-11-16T10:15:30.123456Z"));
     }
 
     @SneakyThrows
-    private void postReading(String sensorId, double value, String timestamp) {
+    private void postReading(String sensorId, double value, String measuredAt) {
         mockMvc.perform(post("/v1/readings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"sensorId": "%s", "value": %s, "timestamp": "%s"}
-                    """.formatted(sensorId, value, timestamp)))
+                    {"sensorId": "%s", "value": %s, "measuredAt": "%s"}
+                    """.formatted(sensorId, value, measuredAt)))
             .andExpect(status().isCreated());
     }
 
