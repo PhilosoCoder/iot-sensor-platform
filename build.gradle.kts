@@ -24,6 +24,32 @@ subprojects {
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()
         }
+
+        // Integration tests (*IT) live in src/test next to the unit tests and need Docker (Testcontainers).
+        // `test` runs all tests (and is what `check`/`build` run); `unitTest` and `integrationTest` run one kind.
+        val testSourceSet = extensions.getByType<SourceSetContainer>()["test"]
+
+        val unitTest = tasks.register<Test>("unitTest") {
+            description = "Runs the unit tests (everything except *IT). No Docker needed."
+            group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+            testClassesDirs = testSourceSet.output.classesDirs
+            classpath = testSourceSet.runtimeClasspath
+
+            filter.excludeTestsMatching("*IT")
+        }
+
+        tasks.register<Test>("integrationTest") {
+            description = "Runs the integration tests (*IT). Needs Docker for Testcontainers."
+            group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+            testClassesDirs = testSourceSet.output.classesDirs
+            classpath = testSourceSet.runtimeClasspath
+
+            filter.includeTestsMatching("*IT")
+            filter.isFailOnNoMatchingTests = false
+            shouldRunAfter(unitTest)
+        }
     }
 }
 

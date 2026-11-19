@@ -3,7 +3,7 @@ IoT Sensor Monitoring Platform — A real-time data ingestion and processing sys
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (also needed for `./gradlew test` and `bootTestRun`, see below)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (also needed for `./gradlew test`/`integrationTest`/`build` and `bootTestRun`, see below)
 - [minikube](https://minikube.sigs.k8s.io/docs/start/) 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [helm](https://helm.sh/docs/intro/install/)
@@ -66,7 +66,7 @@ minikube ssh -- "docker images --format '{{.Repository}}:{{.Tag}}  {{.ID}}  {{.C
 > `-f Dockerfile` is required: `.dockerignore` excludes everything except the jar, and without `-f` the Dockerfile
 > itself is left out of the context `minikube image build` sends.
 >
-> Avoid `eval $(minikube docker-env)` in your main shell: the variables stay set, and `./gradlew test` would then
+> Avoid `eval $(minikube docker-env)` in your main shell: the variables stay set, and `./gradlew integrationTest` would then
 > start its Testcontainers inside minikube.
 
 > Use a fixed tag (not `latest`): with `latest`, Kubernetes defaults to `imagePullPolicy: Always` and tries to pull from Docker Hub instead of using the image built inside minikube.
@@ -186,9 +186,12 @@ the Swagger UI above work unchanged. The container and its data are removed when
 ## Tests
 
 ```bash
-./gradlew test
+./gradlew unitTest          # unit tests and @WebMvcTest controller tests, no Docker needed
+./gradlew integrationTest   # *IT classes, needs Docker
+./gradlew test              # all tests, without building the jar
+./gradlew build             # all tests (via check) + the jar
 ```
 
-Docker must be running: the `@SpringBootTest` integration tests start a PostgreSQL 18 container via Testcontainers,
-so migrations and queries are tested against the same database as in Kubernetes. Without Docker, those tests fail
-at startup. Unit tests and `@WebMvcTest` controller tests don't need Docker.
+Integration tests are the classes named `*IT` (in `src/test`, next to the unit tests). They are `@SpringBootTest`s
+that start a PostgreSQL 18 container via Testcontainers, so migrations and queries are tested against the same
+database as in Kubernetes. Without Docker running, they fail at startup.
