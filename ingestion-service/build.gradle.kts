@@ -40,7 +40,7 @@ tasks.jar {
     enabled = false
 }
 
-tasks.compileJava {
+tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(
         listOf(
             "-Amapstruct.defaultComponentModel=spring",
